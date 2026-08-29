@@ -29,4 +29,4 @@ jobs:
             git commit -m "Adicionar Bege Acinzentado ao seletor"
             git push
           fi
-# disparo da atualização
+# disparo da atualização 2
