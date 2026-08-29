@@ -1,0 +1,31 @@
+name: Atualizar foto principal Bege Acinzentado
+
+on:
+  push:
+    paths:
+      - '.github/workflows/set-bege-nova-primeira.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Atualizar index
+        run: python .github/scripts/set_bege_nova_primeira.py
+      - name: Salvar alteração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária"
+          else
+            git commit -m "Usar nova foto como principal do Bege Acinzentado"
+            git push
+          fi
