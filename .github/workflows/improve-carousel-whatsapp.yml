@@ -1,0 +1,31 @@
+name: Melhorar carrossel e WhatsApp
+
+on:
+  push:
+    paths:
+      - '.github/workflows/improve-carousel-whatsapp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Atualizar site
+        run: python .github/scripts/improve_carousel_whatsapp.py
+      - name: Salvar alteração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária"
+          else
+            git commit -m "Melhorar carrossel por cor e adicionar WhatsApp flutuante"
+            git push
+          fi
