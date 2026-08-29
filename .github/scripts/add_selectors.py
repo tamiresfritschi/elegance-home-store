@@ -1,0 +1,129 @@
+from pathlib import Path
+import re
+
+p = Path('index.html')
+s = p.read_text(encoding='utf-8')
+
+if 'id="productOptions"' in s:
+    print('Seletores já aplicados.')
+    raise SystemExit(0)
+
+css = '''
+.product-options{margin:24px 0 26px}
+.option-group{margin-bottom:20px}
+.option-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.option-label{font-weight:800;font-size:14px}
+.option-hint{font-size:12px;color:var(--muted)}
+.option-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.option-btn{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:11px 15px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:.2s ease;box-shadow:0 2px 0 rgba(54,42,32,.02)}
+.option-btn:hover{border-color:#bda993;transform:translateY(-1px)}
+.option-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);box-shadow:0 7px 18px rgba(45,40,36,.14)}
+.size-btn{min-width:118px;text-align:left;border-radius:15px;padding:12px 14px}
+.size-btn span{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-top:3px}
+.size-btn.active span{color:#e7ded6}
+.selection-box{margin-top:8px;padding:16px 17px;border:1px solid var(--line);border-radius:16px;background:#faf6f1;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.selection-copy{font-size:13px;color:var(--muted);line-height:1.45}
+.selection-copy strong{display:block;color:var(--ink);font-size:15px;margin-bottom:2px}
+.selection-price{font-size:22px;font-weight:800;white-space:nowrap}
+.buy-main{width:100%;margin-top:12px;border:0;border-radius:999px;padding:15px 20px;background:var(--dark);color:#fff;font:inherit;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;transition:.2s ease}
+.buy-main:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(45,40,36,.16)}
+.buy-main.disabled{opacity:.48;cursor:not-allowed;box-shadow:none;transform:none}
+.selection-note{margin-top:8px;text-align:center;color:var(--muted);font-size:11px}
+@media(max-width:540px){.option-buttons{display:grid;grid-template-columns:1fr 1fr}.option-btn{width:100%}.size-btn{min-width:0}.selection-box{align-items:flex-start;flex-direction:column}}
+'''
+s = s.replace('</style>', css + '\n</style>', 1)
+
+options = '''
+<div class="product-options" id="productOptions">
+  <div class="option-group">
+    <div class="option-head"><div class="option-label">1. Escolha a cor</div><div class="option-hint">A foto muda automaticamente</div></div>
+    <div class="option-buttons" role="group" aria-label="Escolha a cor">
+      <button class="option-btn color-btn" type="button" data-color="Fendi Claro" data-slide="1">Fendi Claro</button>
+      <button class="option-btn color-btn" type="button" data-color="Cinza" data-slide="4">Cinza</button>
+      <button class="option-btn color-btn" type="button" data-color="Cinza Pérola" data-slide="5">Cinza Pérola</button>
+      <button class="option-btn color-btn" type="button" data-color="Rosa Blush" data-slide="7">Rosa Blush</button>
+    </div>
+  </div>
+  <div class="option-group">
+    <div class="option-head"><div class="option-label">2. Escolha o tamanho</div><div class="option-hint">4 peças</div></div>
+    <div class="option-buttons" role="group" aria-label="Escolha o tamanho">
+      <button class="option-btn size-btn" type="button" data-size="Casal" data-price="169,90">Casal <span>R$ 169,90</span></button>
+      <button class="option-btn size-btn" type="button" data-size="Queen" data-price="179,90">Queen <span>R$ 179,90</span></button>
+      <button class="option-btn size-btn" type="button" data-size="King" data-price="189,90">King <span>R$ 189,90</span></button>
+    </div>
+  </div>
+  <div class="selection-box" aria-live="polite">
+    <div class="selection-copy"><strong id="selectionTitle">Selecione cor e tamanho</strong><span id="selectionDetail">Monte seu pedido antes de abrir o WhatsApp.</span></div>
+    <div class="selection-price" id="selectionPrice">—</div>
+  </div>
+  <a class="buy-main disabled" id="buyWhatsapp" href="#" aria-disabled="true">Comprar pelo WhatsApp</a>
+  <div class="selection-note">Você poderá confirmar a disponibilidade antes de finalizar.</div>
+</div>
+
+<div class="product-notes">'''
+
+s, n = re.subn(r'\s*<div class="price-list">.*?<div class="product-notes">', '\n' + options, s, count=1, flags=re.S)
+if n != 1:
+    raise SystemExit('Não foi possível localizar a área de preços.')
+
+js = '''
+  // Seletores de cor e tamanho + mensagem pronta para WhatsApp.
+  const colorButtons = [...document.querySelectorAll('.color-btn')];
+  const sizeButtons = [...document.querySelectorAll('.size-btn')];
+  const buyWhatsapp = document.getElementById('buyWhatsapp');
+  const selectionTitle = document.getElementById('selectionTitle');
+  const selectionDetail = document.getElementById('selectionDetail');
+  const selectionPrice = document.getElementById('selectionPrice');
+  let selectedColor = '';
+  let selectedSize = '';
+  let selectedPrice = '';
+
+  function updatePurchase() {
+    const ready = selectedColor && selectedSize && selectedPrice;
+    if (selectionTitle) selectionTitle.textContent = ready ? `${selectedSize} · ${selectedColor}` : 'Selecione cor e tamanho';
+    if (selectionDetail) selectionDetail.textContent = ready ? 'Jogo de Cama 4 Peças 3200 Fios Bordado Premium' : 'Monte seu pedido antes de abrir o WhatsApp.';
+    if (selectionPrice) selectionPrice.textContent = ready ? `R$ ${selectedPrice}` : '—';
+    if (!buyWhatsapp) return;
+    if (ready) {
+      const msg = `Olá! Quero comprar o Jogo de Cama 4 Peças 3200 Fios Bordado Premium, tamanho ${selectedSize}, cor ${selectedColor}, por R$ ${selectedPrice}. Pode confirmar a disponibilidade?`;
+      buyWhatsapp.href = `https://wa.me/5567998547135?text=${encodeURIComponent(msg)}`;
+      buyWhatsapp.classList.remove('disabled');
+      buyWhatsapp.setAttribute('aria-disabled', 'false');
+      buyWhatsapp.target = '_blank';
+      buyWhatsapp.rel = 'noopener';
+    } else {
+      buyWhatsapp.href = '#productOptions';
+      buyWhatsapp.classList.add('disabled');
+      buyWhatsapp.setAttribute('aria-disabled', 'true');
+      buyWhatsapp.removeAttribute('target');
+    }
+  }
+
+  colorButtons.forEach(btn => btn.addEventListener('click', () => {
+    selectedColor = btn.dataset.color || '';
+    colorButtons.forEach(b => b.classList.toggle('active', b === btn));
+    const slideIndex = Number(btn.dataset.slide);
+    if (Number.isFinite(slideIndex)) { show(slideIndex); start(); }
+    updatePurchase();
+  }));
+
+  sizeButtons.forEach(btn => btn.addEventListener('click', () => {
+    selectedSize = btn.dataset.size || '';
+    selectedPrice = btn.dataset.price || '';
+    sizeButtons.forEach(b => b.classList.toggle('active', b === btn));
+    updatePurchase();
+  }));
+
+  buyWhatsapp?.addEventListener('click', event => {
+    if (buyWhatsapp.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  });
+  updatePurchase();
+'''
+
+marker = '  show(0);\n  start();'
+if marker not in s:
+    raise SystemExit('Não foi possível localizar o início do carrossel.')
+s = s.replace(marker, js + '\n' + marker, 1)
+
+p.write_text(s, encoding='utf-8')
+print('Seletores aplicados com sucesso.')
